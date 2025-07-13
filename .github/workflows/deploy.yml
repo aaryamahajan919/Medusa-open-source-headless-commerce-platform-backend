@@ -1,0 +1,30 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image
+      run: |
+        docker build -t ${{ secrets.ECR_REPO }} .
+        docker tag ${{ secrets.ECR_REPO }}:latest ${{ secrets.ECR_URI }}:latest
+        docker push ${{ secrets.ECR_URI }}:latest
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: medusa-task
+        service: medusa-service
+        cluster: medusa-cluster
+        wait-for-service-stability: true
